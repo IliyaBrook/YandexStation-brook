@@ -28,6 +28,7 @@ _LOGGER = logging.getLogger(__name__)
 # https://yandex.ru/dev/dialogs/smart-home/doc/concepts/device-type-sensor.html
 INCLUDE_TYPES = (
     "devices.types.remote_car",
+    "devices.types.remote.ir",
     "devices.types.sensor",
     "devices.types.sensor.button",
     "devices.types.sensor.climate",
