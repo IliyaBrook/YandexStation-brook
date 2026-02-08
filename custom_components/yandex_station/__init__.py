@@ -50,6 +50,7 @@ SPEAKER_PLATFORMS = [
 ]
 # for import section
 PLATFORMS = [
+    "binary_sensor",
     "button",
     "calendar",
     "camera",

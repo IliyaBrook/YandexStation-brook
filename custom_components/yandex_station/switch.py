@@ -9,6 +9,7 @@ from .hass import hass_utils
 _LOGGER = logging.getLogger(__name__)
 
 INCLUDE_TYPES = (
+    "devices.types.remote_car",
     "devices.types.switch",
     "devices.types.socket",
     "devices.types.ventilation",

@@ -13,6 +13,7 @@ from homeassistant.const import (
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
     UnitOfEnergy,
+    UnitOfLength,
     UnitOfPower,
     UnitOfPressure,
     UnitOfTemperature,
@@ -26,6 +27,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # https://yandex.ru/dev/dialogs/smart-home/doc/concepts/device-type-sensor.html
 INCLUDE_TYPES = (
+    "devices.types.remote_car",
     "devices.types.sensor",
     "devices.types.sensor.button",
     "devices.types.sensor.climate",
@@ -79,6 +81,9 @@ ENTITY_DESCRIPTIONS: dict[str, dict] = {
     "electricity_meter": {"class": SENSOR.ENERGY, "units": UnitOfEnergy.KILO_WATT_HOUR},
     "gas_meter": {"class": SENSOR.GAS, "units": UnitOfVolume.CUBIC_METERS},
     "water_meter": {"class": SENSOR.WATER, "units": UnitOfVolume.CUBIC_METERS},
+    # there is no better option than a battery for fuel_level
+    "fuel_level": {"class": SENSOR.BATTERY, "units": PERCENTAGE},
+    "petrol_mileage": {"class": SENSOR.DISTANCE, "units": UnitOfLength.KILOMETERS},
 }
 
 
@@ -110,6 +115,11 @@ class YandexCustomSensor(SensorEntity, YandexCustomEntity):
             if "units" in desc:
                 self._attr_native_unit_of_measurement = desc["units"]
                 self._attr_state_class = SensorStateClass.MEASUREMENT
+        try:
+            if self.config["parameters"]["range"]["precision"] == 1:
+                self._attr_suggested_display_precision = 0
+        except KeyError:
+            pass
 
     def internal_update(self, capabilities: dict, properties: dict):
         if self.instance in properties:

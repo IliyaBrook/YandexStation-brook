@@ -39,6 +39,8 @@ IOT_TYPES = {
     "camera_pan": "devices.capabilities.range",
     "camera_tilt": "devices.capabilities.range",
     "get_stream": "devices.capabilities.video_stream",
+    # "devices.types.remote_car.seat"
+    "heating_mode": "devices.capabilities.range",
     # don't work
     "hsv": "devices.capabilities.color_setting",
     "rgb": "devices.capabilities.color_setting",

@@ -12,6 +12,8 @@ _LOGGER = logging.getLogger(__name__)
 def extract_instance(item: dict) -> str:
     if item["type"] == "devices.capabilities.on_off":
         return "on"
+    if item["type"] == "devices.capabilities.lock":
+        return "lock"
     return item["parameters"].get("instance")
 
 
@@ -112,7 +114,7 @@ class YandexEntity(Entity):
 class YandexCustomEntity(YandexEntity):
     def __init__(self, quasar: YandexQuasar, device: dict, config: dict):
         self.instance = extract_instance(config)
-        super().__init__(quasar, device)
+        super().__init__(quasar, device, config)
         if name := config["parameters"].get("name"):
             self._attr_name += " " + name
         self._attr_unique_id += " " + self.instance

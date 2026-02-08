@@ -102,6 +102,6 @@ async def load_fake_devies(hass: HomeAssistant, quasar: YandexQuasar):
 
     def job():
         with open(path, "rb") as f:
-            quasar.devices += json.load(f)
+            quasar.devices = json.load(f)
 
     await hass.async_add_executor_job(job)
