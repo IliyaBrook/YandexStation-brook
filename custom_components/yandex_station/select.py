@@ -2,6 +2,7 @@ import logging
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.util import slugify
 
 from .core.const import DOMAIN
 from .core.entity import YandexCustomEntity, extract_instance
@@ -91,7 +92,7 @@ class YandexEqualizer(SelectEntity):
         self._attr_name = device["name"] + " Эквалайзер"
         self._attr_unique_id = device["quasar_info"]["device_id"] + f"_equalizer"
 
-        self.entity_id = f"select.yandex_station_{self._attr_unique_id.lower()}"
+        self.entity_id = f"select.yandex_station_{slugify(self._attr_unique_id)}"
 
     async def async_update(self):
         try:
