@@ -709,7 +709,7 @@ class YandexStationBase(MediaBrowser, RestoreEntity):
         if self.local_state:
             await self.glagol.send(utils.external_command("sound_quiter"))
         else:
-            await super().async_volume_up()
+            await super().async_volume_down()
 
     async def async_media_seek(self, position):
         if self.local_state:
