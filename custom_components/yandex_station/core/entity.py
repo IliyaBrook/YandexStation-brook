@@ -14,6 +14,8 @@ def extract_instance(item: dict) -> str:
         return "on"
     if item["type"] == "devices.capabilities.lock":
         return "lock"
+    if item["type"] == "devices.capabilities.zigbee_node":
+        return "zigbee"
     return item["parameters"].get("instance")
 
 
