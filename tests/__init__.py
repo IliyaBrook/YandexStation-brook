@@ -31,6 +31,11 @@ class FakeYandexStation(YandexStationBase):
 
 
 def update_ha_state(cls, device: dict, **kwargs) -> State:
+    device.setdefault("id", "ID")
+    device.setdefault("name", "NAME")
+    device.setdefault("capabilities", [])
+    device.setdefault("properties", [])
+
     asyncio.get_running_loop = lambda: asyncio.new_event_loop()
 
     entity: YandexEntity = cls(FakeQuasar(device), device, **kwargs)

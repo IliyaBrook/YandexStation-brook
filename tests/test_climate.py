@@ -1129,3 +1129,274 @@ def test_rusclimate():
         "target_temp_step": 1,
         "temperature": 25,
     }
+
+
+def test_issue744():
+    device = {
+        "name": "Термостат Гостиная",
+        "type": "devices.types.thermostat",
+        "capabilities": [
+            {
+                "reportable": true,
+                "retrievable": true,
+                "type": "devices.capabilities.on_off",
+                "state": {"instance": "on", "value": true},
+                "parameters": {"split": false},
+                "can_be_deferred": true,
+            },
+            {
+                "reportable": true,
+                "retrievable": true,
+                "type": "devices.capabilities.range",
+                "state": {"instance": "temperature", "value": 29.5},
+                "parameters": {
+                    "instance": "temperature",
+                    "name": "температура",
+                    "unit": "unit.temperature.celsius",
+                    "random_access": true,
+                    "looped": false,
+                    "range": {"min": 5, "max": 30, "precision": 0.5},
+                },
+            },
+            {
+                "reportable": true,
+                "retrievable": true,
+                "type": "devices.capabilities.toggle",
+                "state": {"instance": "controls_locked", "value": false},
+                "parameters": {
+                    "instance": "controls_locked",
+                    "name": "блокировка управления",
+                },
+            },
+            {
+                "reportable": false,
+                "retrievable": false,
+                "type": "devices.capabilities.identify",
+                "state": null,
+                "parameters": {
+                    "instance": "identify",
+                    "time_range_sec": {"min": 0, "max": 65535, "precision": 0},
+                },
+            },
+            {
+                "reportable": true,
+                "retrievable": true,
+                "type": "devices.capabilities.auto_calibration",
+                "state": {
+                    "value": {"state": "calibrated", "recalibration_enabled": true}
+                },
+                "parameters": {
+                    "instance": "auto_calibration",
+                    "not_allowed_recalibration": false,
+                },
+            },
+            {
+                "reportable": true,
+                "retrievable": true,
+                "type": "devices.capabilities.display_orientation",
+                "state": {"value": {"orientation": "vertical_reverse"}},
+                "parameters": {"instance": "display_orientation"},
+            },
+            {
+                "reportable": true,
+                "retrievable": true,
+                "type": "devices.capabilities.open_window_detection",
+                "state": {"value": {"enabled": true, "is_open": false}},
+                "parameters": {"instance": "open_window_detection"},
+            },
+            {
+                "reportable": true,
+                "retrievable": true,
+                "type": "devices.capabilities.antifreeze",
+                "state": {"value": {"enabled": true}},
+                "parameters": {"instance": "antifreeze"},
+            },
+            {
+                "reportable": true,
+                "retrievable": true,
+                "type": "devices.capabilities.antiscale",
+                "state": {"value": {"enabled": true}},
+                "parameters": {"instance": "antiscale"},
+            },
+            {
+                "reportable": true,
+                "retrievable": false,
+                "type": "devices.capabilities.zigbee_node",
+                "state": {
+                    "value": {
+                        "signal_quality": {"status": "good", "lqi": 109, "rssi": -63}
+                    }
+                },
+                "parameters": {"type": "end_device"},
+            },
+        ],
+        "properties": [
+            {
+                "type": "devices.properties.event",
+                "retrievable": false,
+                "reportable": true,
+                "parameters": {
+                    "instance": "serviceability",
+                    "name": "работоспособность устройства",
+                    "events": [
+                        {
+                            "value": "short_or_open_circuit",
+                            "name": "короткое замыкание или обрыв цепи датчика",
+                        },
+                        {
+                            "value": "radiator_valve_blockage",
+                            "name": "медленное движение или заклинивание штока",
+                        },
+                        {
+                            "value": "radiator_valve_too_long",
+                            "name": "шток слишком длинный",
+                        },
+                        {
+                            "value": "radiator_valve_too_short",
+                            "name": "шток слишком короткий",
+                        },
+                        {
+                            "value": "radiator_valve_has_no_resistance",
+                            "name": "отсутствует сопротивление клапана",
+                        },
+                        {
+                            "value": "button_pressed_for_too_long",
+                            "name": "слишком долгое удержание кнопки",
+                        },
+                        {"value": "normal", "name": "нормальное состояние устройства"},
+                    ],
+                },
+                "state": {
+                    "instance": "serviceability",
+                    "status": "normal",
+                    "value": "normal",
+                },
+                "last_activated": "2026-02-12T04:55:33Z",
+                "last_updated": "2026-02-12T04:55:33Z",
+            },
+            {
+                "type": "devices.properties.float",
+                "retrievable": false,
+                "reportable": true,
+                "parameters": {
+                    "instance": "temperature",
+                    "name": "температура",
+                    "unit": "unit.temperature.celsius",
+                    "range": {"min": -273.15, "max": 327.67, "precision": 0.01},
+                },
+                "state": {"percent": null, "status": null, "value": 26.3},
+                "state_changed_at": "2026-02-12T09:11:14Z",
+                "last_updated": "2026-02-12T09:11:14Z",
+            },
+            {
+                "type": "devices.properties.float",
+                "retrievable": false,
+                "reportable": true,
+                "parameters": {
+                    "instance": "battery_level",
+                    "name": "уровень заряда",
+                    "unit": "unit.percent",
+                },
+                "state": {"percent": 75, "status": "warning", "value": 75},
+                "trend": {"target": 0, "status": "normal"},
+                "state_changed_at": "2026-02-08T10:04:43Z",
+                "last_updated": "2026-02-12T06:25:03Z",
+            },
+        ],
+        "parameters": {
+            "device_info": {
+                "manufacturer": "Yandex",
+                "model": "YNDX-00518",
+            },
+        },
+    }
+    state = update_ha_state(YandexClimate, device, config={})
+    assert state.state == "auto"
+
+
+def test_issue746():
+    device = {
+        "name": "Кондиционер",
+        "type": "devices.types.thermostat.ac",
+        "capabilities": [
+            {
+                "reportable": true,
+                "retrievable": true,
+                "type": "devices.capabilities.on_off",
+                "state": {"instance": "on", "value": false},
+                "parameters": {"split": false},
+                "can_be_deferred": true,
+            },
+            {
+                "reportable": true,
+                "retrievable": true,
+                "type": "devices.capabilities.range",
+                "state": {"instance": "temperature", "value": 16},
+                "parameters": {
+                    "instance": "temperature",
+                    "name": "температура",
+                    "unit": "unit.temperature.celsius",
+                    "random_access": true,
+                    "looped": false,
+                    "range": {"min": 16, "max": 30, "precision": 1},
+                },
+            },
+            {
+                "reportable": true,
+                "retrievable": true,
+                "type": "devices.capabilities.mode",
+                "state": {"instance": "swing", "value": "low"},
+                "parameters": {
+                    "instance": "swing",
+                    "name": "направление воздуха",
+                    "modes": [
+                        {"value": "low", "name": "Низкая"},
+                        {"value": "medium", "name": "Средняя"},
+                    ],
+                },
+            },
+            {
+                "reportable": true,
+                "retrievable": true,
+                "type": "devices.capabilities.mode",
+                "state": {"instance": "fan_speed", "value": "auto"},
+                "parameters": {
+                    "instance": "fan_speed",
+                    "name": "скорость вентиляции",
+                    "modes": [
+                        {"value": "auto", "name": "Авто"},
+                        {"value": "low", "name": "Низкая"},
+                        {"value": "medium", "name": "Средняя"},
+                        {"value": "high", "name": "Высокая"},
+                    ],
+                },
+            },
+            {
+                "reportable": true,
+                "retrievable": true,
+                "type": "devices.capabilities.mode",
+                "state": {"instance": "thermostat", "value": "auto"},
+                "parameters": {
+                    "instance": "thermostat",
+                    "name": "термостат",
+                    "modes": [
+                        {"value": "cool", "name": "Охлаждение"},
+                        {"value": "heat", "name": "Нагрев"},
+                        {"value": "fan_only", "name": "Вентиляция"},
+                        {"value": "dry", "name": "Осушение"},
+                        {"value": "auto", "name": "Авто"},
+                    ],
+                },
+            },
+            {
+                "reportable": false,
+                "retrievable": false,
+                "type": "devices.capabilities.ir_remote",
+                "state": null,
+                "parameters": {},
+            },
+        ],
+    }
+
+    state = update_ha_state(YandexClimate, device, config={})
+    assert state.state == "off"
