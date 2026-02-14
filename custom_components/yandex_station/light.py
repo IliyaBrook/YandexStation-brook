@@ -89,8 +89,23 @@ class YandexLight(LightEntity, YandexEntity):
                 else None
             )
 
-        # check if color exists in update
-        if color := capabilities.get("color"):
+        if animation := capabilities.get("color_animation"):
+            animation_type = animation["current_animation_type"]
+            if animation_type == "color":
+                color = animation["animations"]["color"]
+                state = color["internal_state"]
+                if state["instance"] == "hsv":
+                    value = state["value"]
+                    self._attr_hs_color = (value["h"], value["s"])
+                    self._attr_color_mode = ColorMode.HS
+            elif animation_type == "scene":
+                scene = animation["animations"]["scene"]
+                id = scene["variant"]
+                self._attr_effect = next(
+                    i["name"] for i in self.effects if i["id"] == id
+                )
+
+        elif color := capabilities.get("color"):
             value = color.get("value")
 
             if isinstance(value, dict):
@@ -113,22 +128,6 @@ class YandexLight(LightEntity, YandexEntity):
                 )
             else:
                 self._attr_effect = None
-
-        elif animation := capabilities.get("color_animation"):
-            animation_type = animation["current_animation_type"]
-            if animation_type == "color":
-                color = animation["animations"]["color"]
-                state = color["internal_state"]
-                if state["instance"] == "hsv":
-                    value = state["value"]
-                    self._attr_hs_color = (value["h"], value["s"])
-                    self._attr_color_mode = ColorMode.HS
-            elif animation_type == "scene":
-                scene = animation["animations"]["scene"]
-                id = scene["variant"]
-                self._attr_effect = next(
-                    i["name"] for i in self.effects if i["id"] == id
-                )
 
     async def async_turn_on(
         self,
