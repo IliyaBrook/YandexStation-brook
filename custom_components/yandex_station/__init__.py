@@ -157,7 +157,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         hass.components.persistent_notification.async_create(
             "Необходимо заново авторизоваться в Яндексе. Для этого [добавьте "
             "новую интеграцию](/config/integrations) с тем же логином.",
-            title="Yandex.Station",
+            title="Yandex.Station Brook",
         )
         return False
 
