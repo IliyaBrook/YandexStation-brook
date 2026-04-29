@@ -14,6 +14,7 @@ Errors:
 - account.not_found - wrong login
 - password.not_matched
 - captcha.required
+- pwl.flow - new PWL frontend rolled out, legacy endpoint disabled
 """
 
 import asyncio
@@ -27,6 +28,50 @@ import time
 from aiohttp import ClientSession
 
 _LOGGER = logging.getLogger(__name__)
+
+# Yandex Passport rolled out a new PWL ("Password-Less", aka "tractor") frontend.
+# Legacy `<input name="csrf_token" value="...">` is gone on those pages; instead
+# CSRF is exposed as `window.__CSRF__ = "hash:timestamp"` and the auth APIs moved
+# to /api/passport/* served via internal routing not reachable from outside.
+# We support both layouts so non-PWL accounts keep working, and surface a clear
+# error for PWL accounts so they can fall back to cookies/token auth.
+RE_CSRF_LEGACY = re.compile(r'"csrf_token" value="([^"]+)"')
+RE_CSRF_PWL = re.compile(r'window\.__CSRF__\s*=\s*"([^"]+)"')
+
+
+def _extract_csrf(html: str) -> str | None:
+    """Pull CSRF token out of passport.yandex.ru auth page HTML.
+
+    Returns the token string, or None if the page contains neither the legacy
+    form input nor the PWL `window.__CSRF__` global.
+    """
+    m = RE_CSRF_LEGACY.search(html)
+    if m:
+        return m.group(1)
+    m = RE_CSRF_PWL.search(html)
+    if m:
+        return m.group(1)
+    return None
+
+
+def _is_pwl_page(html: str) -> bool:
+    """Heuristic: did Yandex serve us the new PWL/tractor frontend?"""
+    return "pwl-tractor" in html or "qrBezQrUrl" in html or "pwl-yandex" in html
+
+
+class PWLAuthDisabledError(Exception):
+    """Raised when the legacy login endpoint is blocked by Yandex PWL rollout.
+
+    The user should switch to cookie or token-based authentication, both of
+    which still work against mobileproxy.passport.yandex.net.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Yandex switched this account to the PWL (tractor) auth frontend. "
+            "QR / password / email-link login no longer works through the legacy "
+            "endpoint. Please log in via Cookies or Token (see README)."
+        )
 
 
 class LoginResponse:
@@ -172,20 +217,26 @@ class YandexSession(BasicSession):
         # step 1: csrf_token
         r = await self._get("https://passport.yandex.ru/am?app_platform=android")
         resp = await r.text()
-        m = re.search(r'"csrf_token" value="([^"]+)"', resp)
-        assert m, resp
-        self.auth_payload = {"csrf_token": m[1]}
+        csrf = _extract_csrf(resp)
+        if csrf is None:
+            _LOGGER.error("CSRF token not found on passport page")
+            raise PWLAuthDisabledError()
+        self.auth_payload = {"csrf_token": csrf}
 
         # step 2: track_id
         r = await self._post(
             "https://passport.yandex.ru/registration-validations/auth/multi_step/start",
             data={**self.auth_payload, "login": username},
         )
+        if r.status == 403 and _is_pwl_page(resp):
+            raise PWLAuthDisabledError()
         resp = await r.json()
         if resp.get("can_register") is True:
             return LoginResponse({"errors": ["account.not_found"]})
 
-        assert resp.get("can_authorize") is True, resp
+        if resp.get("can_authorize") is not True:
+            _LOGGER.error("multi_step/start unexpected response: %s", resp)
+            raise PWLAuthDisabledError()
         self.auth_payload["track_id"] = resp["track_id"]
 
         # "preferred_auth_method":"password","auth_methods":["password","magic_link","magic_x_token"]}
@@ -221,21 +272,29 @@ class YandexSession(BasicSession):
         """Get link to QR-code auth."""
         # step 1: csrf_token
         r = await self._get("https://passport.yandex.ru/am?app_platform=android")
-        resp = await r.text()
-        m = re.search(r'"csrf_token" value="([^"]+)"', resp)
-        assert m, resp
+        html = await r.text()
+        csrf = _extract_csrf(html)
+        if csrf is None:
+            _LOGGER.error("CSRF token not found on passport page")
+            raise PWLAuthDisabledError()
 
         # step 2: track_id
         r = await self._post(
             "https://passport.yandex.ru/registration-validations/auth/password/submit",
             data={
-                "csrf_token": m[1],
+                "csrf_token": csrf,
                 "retpath": "https://passport.yandex.ru/profile",
                 "with_code": 1,
             },
         )
+        if r.status == 403 and _is_pwl_page(html):
+            raise PWLAuthDisabledError()
         resp = await r.json()
-        assert resp["status"] == "ok", resp
+        if resp.get("status") != "ok":
+            if _is_pwl_page(html):
+                raise PWLAuthDisabledError()
+            _LOGGER.error("password/submit unexpected response: %s", resp)
+            raise AssertionError(resp)
 
         self.auth_payload = {
             "csrf_token": resp["csrf_token"],

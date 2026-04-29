@@ -20,7 +20,7 @@ from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
 from .core.const import DOMAIN
 from .core.yandex_quasar import YandexQuasar
-from .core.yandex_session import LoginResponse, YandexSession
+from .core.yandex_session import LoginResponse, PWLAuthDisabledError, YandexSession
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,10 +68,14 @@ class YandexStationFlowHandler(ConfigFlow, domain=DOMAIN):
 
         method = user_input["method"]
         if method == "qr":
+            try:
+                qr_url = await self.yandex.get_qr()
+            except PWLAuthDisabledError:
+                return self._pwl_disabled_form()
             return self.async_show_form(
                 step_id="qr",
                 description_placeholders={
-                    "qr_url": await self.yandex.get_qr(),
+                    "qr_url": qr_url,
                     "ya_url": "https://passport.yandex.ru/profile",
                 },
             )
@@ -119,13 +123,19 @@ class YandexStationFlowHandler(ConfigFlow, domain=DOMAIN):
 
     async def async_step_auth(self, user_input):
         """User submited username and password. Or YAML error."""
-        resp = await self.yandex.login_username(user_input["username"])
-        if resp.ok:
-            resp = await self.yandex.login_password(user_input["password"])
+        try:
+            resp = await self.yandex.login_username(user_input["username"])
+            if resp.ok:
+                resp = await self.yandex.login_password(user_input["password"])
+        except PWLAuthDisabledError:
+            return self._pwl_disabled_form()
         return await self._check_yandex_response(resp)
 
     async def async_step_email(self, user_input):
-        resp = await self.yandex.login_username(user_input["username"])
+        try:
+            resp = await self.yandex.login_username(user_input["username"])
+        except PWLAuthDisabledError:
+            return self._pwl_disabled_form()
         if not resp.magic_link_email:
             self.cur_step["errors"] = {"base": "email.unsupported"}
             return self.cur_step
@@ -172,6 +182,26 @@ class YandexStationFlowHandler(ConfigFlow, domain=DOMAIN):
     async def async_step_captcha2(self, user_input):
         resp = await self.yandex.login_password(user_input["password"])
         return await self._check_yandex_response(resp)
+
+    def _pwl_disabled_form(self):
+        """Re-render the method picker with a clear PWL error banner."""
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("method", default="cookies"): vol.In(
+                        {
+                            "qr": "QR-код",
+                            "auth": "Пароль или одноразовый ключ",
+                            "email": "Ссылка на E-mail",
+                            "cookies": "Cookies",
+                            "token": "Токен",
+                        }
+                    )
+                }
+            ),
+            errors={"base": "pwl.flow"},
+        )
 
     async def _check_yandex_response(self, resp: LoginResponse):
         """Check Yandex response. Do not create entry for the same login. Show
